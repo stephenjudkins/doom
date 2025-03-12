@@ -125,43 +125,6 @@ impl winit::application::ApplicationHandler for Doom {
             _ => (),
         }
     }
-
-    fn new_events(
-        &mut self,
-        event_loop: &winit::event_loop::ActiveEventLoop,
-        cause: winit::event::StartCause,
-    ) {
-        let _ = (event_loop, cause);
-    }
-
-    fn user_event(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, event: ()) {
-        let _ = (event_loop, event);
-    }
-
-    fn device_event(
-        &mut self,
-        event_loop: &winit::event_loop::ActiveEventLoop,
-        device_id: winit::event::DeviceId,
-        event: winit::event::DeviceEvent,
-    ) {
-        let _ = (event_loop, device_id, event);
-    }
-
-    fn about_to_wait(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let _ = event_loop;
-    }
-
-    fn suspended(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let _ = event_loop;
-    }
-
-    fn exiting(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let _ = event_loop;
-    }
-
-    fn memory_warning(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let _ = event_loop;
-    }
 }
 
 fn main() {
