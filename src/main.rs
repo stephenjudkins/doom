@@ -1,67 +1,16 @@
-use std::{
-    os::raw,
-    ptr::null,
-    rc::Rc,
-    sync::Mutex,
-    thread::sleep,
-    time::{Duration, Instant},
-};
+use oxidoom::*;
 
-use once_cell::sync::Lazy;
-use softbuffer::Surface;
+use std::rc::Rc;
+
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-static START_TIME: Lazy<Instant> = Lazy::new(|| Instant::now());
-
-#[no_mangle]
-extern "C" fn DG_Init() {}
-
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 400;
-
-static REDRAW_REQUESTED: Mutex<bool> = Mutex::new(false);
-
-#[no_mangle]
-extern "C" fn DG_DrawFrame() {
-    let mut redraw_requested = REDRAW_REQUESTED.lock().unwrap();
-    *redraw_requested = true;
-}
-
-#[no_mangle]
-extern "C" fn DG_SleepMs(ms: u32) {
-    sleep(Duration::from_millis(ms as u64));
-}
-
-#[no_mangle]
-extern "C" fn DG_GetTicksMs() -> u32 {
-    u32::try_from(START_TIME.elapsed().as_millis())
-        .expect("Can't fit passed milliseconds into u32!")
-}
-
-#[no_mangle]
-extern "C" fn DG_GetKey(_pressed: *mut raw::c_int, _key: *mut raw::c_uchar) -> raw::c_int {
-    0
-}
-
-#[no_mangle]
-extern "C" fn DG_SetWindowTitle(_title: *const u8) {}
-
-#[no_mangle]
-static mut DG_ScreenBuffer: *const u32 = std::ptr::null();
-
-extern "C" {
-    fn doomgeneric_Create(argc: usize, argv: *const *const u8);
-    fn doomgeneric_Tick();
-}
-
-#[derive(Default)]
-struct Doom {
+pub struct WinitDoom {
     window: Option<Rc<Window>>,
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
 }
 
-impl winit::application::ApplicationHandler for Doom {
+impl winit::application::ApplicationHandler for WinitDoom {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let window = Rc::new(
             event_loop
@@ -95,35 +44,36 @@ impl winit::application::ApplicationHandler for Doom {
             }
             winit::event::WindowEvent::RedrawRequested => {
                 let window = self.window.as_ref().unwrap();
-
-                unsafe {
-                    doomgeneric_Tick();
-                }
-
-                let mut redraw_requested = REDRAW_REQUESTED.lock().unwrap();
-
-                if *redraw_requested {
-                    let surface: &mut Surface<Rc<Window>, Rc<Window>> =
-                        self.surface.as_mut().unwrap();
+                tick();
+                let mut doom = GLOBAL_DOOM.lock().unwrap();
+                if doom.redraw_requested {
+                    let surface = self.surface.as_mut().unwrap();
                     let mut buffer = surface.buffer_mut().unwrap();
 
-                    unsafe {
-                        std::ptr::copy(
-                            DG_ScreenBuffer,
-                            buffer.as_mut_ptr(),
-                            (WIDTH * HEIGHT) as usize,
-                        );
+                    for i in 0..PIXELS {
+                        buffer[i] = doom.display_buffer[i]
                     }
 
                     buffer.present().unwrap();
-
-                    *redraw_requested = false;
+                    doom.redraw_requested = false;
                 }
 
                 window.request_redraw();
             }
+            winit::event::WindowEvent::KeyboardInput { event: _event, .. } => {
+                // eprintln!("{event:?}");
+            }
             _ => (),
         }
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        _event: winit::event::DeviceEvent,
+    ) {
+        // eprintln!("{event:?}");
     }
 }
 
@@ -132,10 +82,11 @@ fn main() {
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
-    unsafe {
-        doomgeneric_Create(0, null());
-    }
+    init_global_doom();
 
-    let mut app = Doom::default();
+    let mut app = WinitDoom {
+        window: None,
+        surface: None,
+    };
     event_loop.run_app(&mut app).unwrap();
 }
