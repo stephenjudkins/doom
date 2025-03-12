@@ -1,24 +1,26 @@
 use std::{
-    os::raw, ptr::null, rc::Rc, sync::Mutex, thread::sleep, time::{Duration, Instant}
+    os::raw,
+    ptr::null,
+    rc::Rc,
+    sync::Mutex,
+    thread::sleep,
+    time::{Duration, Instant},
 };
 
 use once_cell::sync::Lazy;
 use softbuffer::Surface;
-use winit::dpi::{PhysicalSize};
+use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-
 static START_TIME: Lazy<Instant> = Lazy::new(|| Instant::now());
-
-// static REDRAW_REQUESTED: Once
 
 #[no_mangle]
 extern "C" fn DG_Init() {}
 
-const WIDTH:u32 = 640;
-const HEIGHT:u32 = 400;
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 400;
 
-static REDRAW_REQUESTED:Mutex<bool> = Mutex::new(false);
+static REDRAW_REQUESTED: Mutex<bool> = Mutex::new(false);
 
 #[no_mangle]
 extern "C" fn DG_DrawFrame() {
@@ -56,17 +58,23 @@ extern "C" {
 #[derive(Default)]
 struct Doom {
     window: Option<Rc<Window>>,
-    surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>
+    surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
 }
 
 impl winit::application::ApplicationHandler for Doom {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let window = 
-            Rc::new(event_loop
-                .create_window(winit::window::Window::default_attributes()
-                        .with_inner_size(winit::dpi::Size::Physical(PhysicalSize { width: WIDTH, height: HEIGHT }))
-                        .with_resizable(false)
-                ).unwrap());
+        let window = Rc::new(
+            event_loop
+                .create_window(
+                    winit::window::Window::default_attributes()
+                        .with_inner_size(winit::dpi::Size::Physical(PhysicalSize {
+                            width: WIDTH,
+                            height: HEIGHT,
+                        }))
+                        .with_resizable(false),
+                )
+                .unwrap(),
+        );
 
         let context = softbuffer::Context::new(window.clone()).unwrap();
         let surface = softbuffer::Surface::new(&context, window.clone()).unwrap();
@@ -94,13 +102,17 @@ impl winit::application::ApplicationHandler for Doom {
 
                 let mut redraw_requested = REDRAW_REQUESTED.lock().unwrap();
 
-
                 if *redraw_requested {
-                    let surface: &mut Surface<Rc<Window>, Rc<Window>> = self.surface.as_mut().unwrap();
+                    let surface: &mut Surface<Rc<Window>, Rc<Window>> =
+                        self.surface.as_mut().unwrap();
                     let mut buffer = surface.buffer_mut().unwrap();
 
                     unsafe {
-                        std::ptr::copy(DG_ScreenBuffer, buffer.as_mut_ptr(), (WIDTH * HEIGHT) as usize);
+                        std::ptr::copy(
+                            DG_ScreenBuffer,
+                            buffer.as_mut_ptr(),
+                            (WIDTH * HEIGHT) as usize,
+                        );
                     }
 
                     buffer.present().unwrap();
@@ -113,15 +125,19 @@ impl winit::application::ApplicationHandler for Doom {
             _ => (),
         }
     }
-    
-    fn new_events(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, cause: winit::event::StartCause) {
+
+    fn new_events(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        cause: winit::event::StartCause,
+    ) {
         let _ = (event_loop, cause);
     }
-    
+
     fn user_event(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, event: ()) {
         let _ = (event_loop, event);
     }
-    
+
     fn device_event(
         &mut self,
         event_loop: &winit::event_loop::ActiveEventLoop,
@@ -130,19 +146,19 @@ impl winit::application::ApplicationHandler for Doom {
     ) {
         let _ = (event_loop, device_id, event);
     }
-    
+
     fn about_to_wait(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let _ = event_loop;
     }
-    
+
     fn suspended(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let _ = event_loop;
     }
-    
+
     fn exiting(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let _ = event_loop;
     }
-    
+
     fn memory_warning(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let _ = event_loop;
     }
