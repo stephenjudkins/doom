@@ -6,14 +6,12 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use once_cell::sync::Lazy;
 
 pub struct Doom {
+    pub start_time: Instant,
     pub redraw_requested: bool,
     pub display_buffer: [u32; PIXELS],
 }
-
-pub static START_TIME: Lazy<Instant> = Lazy::new(|| Instant::now());
 
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 400;
@@ -32,11 +30,11 @@ pub fn tick() {
 }
 
 lazy_static! {
-  // doomgeneric_Create(0, null());
-  pub static ref GLOBAL_DOOM: Mutex<Doom> = Mutex::new(Doom {
-    redraw_requested: false,
-    display_buffer: [0; PIXELS],
-  });
+    pub static ref GLOBAL_DOOM: Mutex<Doom> = Mutex::new(Doom {
+        start_time: Instant::now(),
+        redraw_requested: false,
+        display_buffer: [0; PIXELS],
+    });
 }
 
 #[no_mangle]
@@ -63,7 +61,9 @@ extern "C" fn DG_SleepMs(ms: u32) {
 
 #[no_mangle]
 extern "C" fn DG_GetTicksMs() -> u32 {
-    u32::try_from(START_TIME.elapsed().as_millis())
+    let doom = GLOBAL_DOOM.lock().unwrap();
+
+    u32::try_from(doom.start_time.elapsed().as_millis())
         .expect("Can't fit passed milliseconds into u32!")
 }
 
